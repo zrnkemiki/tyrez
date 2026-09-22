@@ -49,6 +49,12 @@ const photoUrl = (p) =>
   p
     ? supabase.storage.from("tyre-images").getPublicUrl(p).data.publicUrl
     : null;
+const formatDateTime = (value) =>
+  new Intl.DateTimeFormat("sr-RS", {
+    dateStyle: "medium",
+    timeStyle: "short",
+    timeZone: "Europe/Belgrade",
+  }).format(new Date(value));
 
 function App() {
   const [session, setSession] = useState(null),
@@ -612,6 +618,28 @@ function TyreForm({ form, setForm, save, close, locations, admin }) {
   );
 }
 function Details({ tyre, admin, view, completeShipping, cancelShipping, close, edit, remove, operate }) {
+  const tyreFacts = [
+    ["Status", L[tyre.status]],
+    ["Cena", `${tyre.sale_price} € / kom.`],
+    ["Šara", tyre.tread_depth_mm ? `${tyre.tread_depth_mm} mm` : "Nije uneta"],
+    ["Količina", `${tyre.quantity} kom.`],
+    ["Sezona", L[tyre.season]],
+    ["Tip", tyre.is_commercial ? "C / teretna" : "Putnička"],
+    ["Magacin", tyre.location || "Nije unet"],
+    tyre.dot && ["DOT", tyre.dot],
+    admin && tyre.purchase_price != null && ["Nabavna cena", `${tyre.purchase_price} € / kom.`],
+  ].filter(Boolean);
+  const customerFacts =
+    tyre.status === "available"
+      ? []
+      : [
+          ["Kupac", tyre.customer_name || "Nije unet"],
+          ["Telefon", tyre.customer_phone || "Nije unet"],
+          tyre.customer_address && ["Adresa", tyre.customer_address],
+          tyre.shipment_required && ["Za slanje", "Da"],
+          tyre.reserved_at && ["Rezervisano", tyre.reserved_at.slice(0, 10)],
+          tyre.sold_at && ["Prodato", formatDateTime(tyre.sold_at)],
+        ].filter(Boolean);
   return (
     <div className="backdrop">
       <section className="modal">
@@ -630,15 +658,7 @@ function Details({ tyre, admin, view, completeShipping, cancelShipping, close, e
           {tyre.width}/{tyre.profile} R{tyre.diameter}
         </h3>
         <dl className="detail-list">
-          {[
-            ["Status", L[tyre.status]],
-            ["Cena", `${tyre.sale_price} € / kom.`],
-            ["Kupac", tyre.customer_name || "—"],
-            ["Telefon", tyre.customer_phone || "—"],
-            ["Adresa", tyre.customer_address || "—"],
-            ["Za slanje", tyre.shipment_required ? "Da" : "Ne"],
-            ["Prodato", tyre.sold_at?.slice(0, 10) || "—"],
-          ].map(([a, b]) => (
+          {[...tyreFacts, ...customerFacts].map(([a, b]) => (
             <div key={a}>
               <dt>{a}</dt>
               <dd>{b}</dd>
