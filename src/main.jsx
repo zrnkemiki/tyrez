@@ -24,7 +24,9 @@ const empty = {
   purchase_price: "",
   location: "",
   is_commercial: false,
-  photoFile: null,
+  photoFiles: [],
+  images: [],
+  removedImageIds: [],
 };
 const sizes = {
   width: [
@@ -49,6 +51,12 @@ const photoUrl = (p) =>
   p
     ? supabase.storage.from("tyre-images").getPublicUrl(p).data.publicUrl
     : null;
+const imagesFor = (tyre) =>
+  tyre.images?.length
+    ? tyre.images
+    : tyre.photo_path
+      ? [{ id: "legacy", path: tyre.photo_path }]
+      : [];
 const formatDateTime = (value) =>
   new Intl.DateTimeFormat("sr-RS", {
     dateStyle: "medium",
@@ -97,33 +105,38 @@ function App() {
             .select("*")
             .order("created_at", { ascending: false })
         : supabase.rpc("employee_inventory");
-    const [{ data, error }, { data: loc }] = await Promise.all([
+    const [{ data, error }, { data: loc }, { data: imageRows, error: imagesError }] = await Promise.all([
       q,
       supabase
         .from("warehouse_locations")
         .select("code,name")
         .eq("active", true)
         .order("code"),
+      supabase
+        .from("tyre_images")
+        .select("id,tyre_id,path,sort_order,created_at")
+        .order("sort_order")
+        .order("created_at"),
     ]);
     if (error) setMsg(error.message);
-    else setTyres(data || []);
+    else {
+      const byTyreId = new Map();
+      (imageRows || []).forEach((image) => {
+        byTyreId.set(image.tyre_id, [...(byTyreId.get(image.tyre_id) || []), image]);
+      });
+      setTyres((data || []).map((tyre) => ({ ...tyre, images: byTyreId.get(tyre.id) || [] })));
+    }
+    if (imagesError) setMsg("Pokrenite SQL migraciju 008_tyre_image_gallery.sql, pa osvežite stranicu.");
     setLocations(loc || []);
   }
   async function save(e) {
     e.preventDefault();
-    const { photoFile, ...fields } = form;
-    let photo_path = form.photo_path || null;
-    if (photoFile) {
-      const optimized = await shrink(photoFile);
-      photo_path = `${session.user.id}/${crypto.randomUUID()}.webp`;
-      const { error } = await supabase.storage
-        .from("tyre-images")
-        .upload(photo_path, optimized, { contentType: "image/webp" });
-      if (error) return setMsg(error.message);
-    }
+    const { photoFiles = [], images = [], removedImageIds = [], id, photo_path: oldPhotoPath, ...fields } = form;
+    const keptImages = images.filter((image) => !removedImageIds.includes(image.id));
+    if (keptImages.length + photoFiles.length > 6)
+      return setMsg("Maksimalno je dozvoljeno 6 fotografija po gumi.");
     const row = {
       ...fields,
-      photo_path,
       width: +fields.width,
       profile: +fields.profile,
       diameter: +fields.diameter,
@@ -131,12 +144,35 @@ function App() {
       sale_price: +fields.sale_price,
       tread_depth_mm: fields.tread_depth_mm ? +fields.tread_depth_mm : null,
       purchase_price: fields.purchase_price ? +fields.purchase_price : null,
-      created_by: session.user.id,
     };
-    const result = form.id
-      ? await supabase.from("tyres").update(row).eq("id", form.id)
-      : await supabase.from("tyres").insert(row);
+    const result = id
+      ? await supabase.from("tyres").update(row).eq("id", id).select("id").single()
+      : await supabase.from("tyres").insert({ ...row, created_by: session.user.id }).select("id").single();
     if (result.error) return setMsg(result.error.message);
+    const tyreId = result.data.id;
+    const removedImages = images.filter((image) => removedImageIds.includes(image.id));
+    if (removedImages.length) {
+      await supabase.storage.from("tyre-images").remove(removedImages.map((image) => image.path));
+      const removableIds = removedImages.filter((image) => image.id !== "legacy").map((image) => image.id);
+      if (removableIds.length) await supabase.from("tyre_images").delete().in("id", removableIds);
+    }
+    const uploadedImages = [];
+    for (const [index, file] of photoFiles.entries()) {
+      const path = `${session.user.id}/${crypto.randomUUID()}.webp`;
+      const optimized = await shrink(file);
+      const { error: uploadError } = await supabase.storage
+        .from("tyre-images")
+        .upload(path, optimized, { contentType: "image/webp" });
+      if (uploadError) return setMsg(uploadError.message);
+      uploadedImages.push({ tyre_id: tyreId, path, sort_order: keptImages.length + index });
+    }
+    if (uploadedImages.length) {
+      const { error: imageError } = await supabase.from("tyre_images").insert(uploadedImages);
+      if (imageError) return setMsg(imageError.message);
+    }
+    const coverPath = keptImages[0]?.path || uploadedImages[0]?.path || null;
+    if (coverPath !== oldPhotoPath || removedImages.length)
+      await supabase.from("tyres").update({ photo_path: coverPath }).eq("id", tyreId);
     setForm(null);
     setMsg("Sačuvano.");
     load();
@@ -144,8 +180,8 @@ function App() {
   async function remove(t) {
     if (!confirm(`Obrisati ${t.brand} ${t.width}/${t.profile} R${t.diameter}?`))
       return;
-    if (t.photo_path)
-      await supabase.storage.from("tyre-images").remove([t.photo_path]);
+    const imagePaths = [...new Set([...imagesFor(t).map((image) => image.path), t.photo_path].filter(Boolean))];
+    if (imagePaths.length) await supabase.storage.from("tyre-images").remove(imagePaths);
     const { error } = await supabase.from("tyres").delete().eq("id", t.id);
     if (error) return setMsg(error.message);
     setSelected(null);
@@ -329,7 +365,7 @@ function App() {
           close={() => setSelected(null)}
           edit={() => {
             setSelected(null);
-            setForm({ ...selected, photoFile: null });
+            setForm({ ...selected, photoFiles: [], removedImageIds: [] });
           }}
           remove={() => remove(selected)}
           operate={setOperation}
@@ -486,7 +522,7 @@ function Filters({ f, setF, sold }) {
   );
 }
 function Card({ tyre, open }) {
-  const p = photoUrl(tyre.photo_path);
+  const p = photoUrl(imagesFor(tyre)[0]?.path);
   return (
     <article className="tyre-card">
       {p ? (
@@ -517,6 +553,16 @@ function Card({ tyre, open }) {
   );
 }
 function TyreForm({ form, setForm, save, close, locations, admin }) {
+  const existingImages = imagesFor(form);
+  const pendingImages = form.photoFiles || [];
+  const visibleImages = existingImages.filter(
+    (image) => !form.removedImageIds?.includes(image.id),
+  );
+  const addPhotos = (files) => {
+    const combined = [...pendingImages, ...files];
+    const allowed = Math.max(0, 6 - visibleImages.length);
+    setForm({ ...form, photoFiles: combined.slice(0, allowed) });
+  };
   const I = (l, k, p = {}) => (
     <label>
       {l}
@@ -601,17 +647,54 @@ function TyreForm({ form, setForm, save, close, locations, admin }) {
           ))}
         </datalist>
         <label className="photo-upload">
-          Fotografija
+          Fotografije <small>(najviše 6)</small>
           <input
             type="file"
             accept="image/*"
             capture="environment"
-            onChange={(e) =>
-              setForm({ ...form, photoFile: e.target.files?.[0] })
-            }
+            multiple
+            onChange={(e) => addPhotos(Array.from(e.target.files || []))}
           />
-          <span>{form.photoFile?.name || "Fotografiši ili izaberi sliku"}</span>
+          <span>Fotografiši ili izaberi slike ({visibleImages.length + pendingImages.length}/6)</span>
         </label>
+        {(visibleImages.length > 0 || pendingImages.length > 0) && (
+          <div className="image-editor-list">
+            {visibleImages.map((image) => (
+              <div key={image.id} className="image-editor-item">
+                <img src={photoUrl(image.path)} alt="Fotografija gume" />
+                <button
+                  type="button"
+                  aria-label="Ukloni fotografiju"
+                  onClick={() =>
+                    setForm({
+                      ...form,
+                      removedImageIds: [...(form.removedImageIds || []), image.id],
+                    })
+                  }
+                >
+                  ×
+                </button>
+              </div>
+            ))}
+            {pendingImages.map((file, index) => (
+              <div key={`${file.name}-${index}`} className="image-editor-item pending-image">
+                <span>{file.name}</span>
+                <button
+                  type="button"
+                  aria-label="Ukloni novu fotografiju"
+                  onClick={() =>
+                    setForm({
+                      ...form,
+                      photoFiles: pendingImages.filter((_, fileIndex) => fileIndex !== index),
+                    })
+                  }
+                >
+                  ×
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
         <label className="checkbox">
           <input
             type="checkbox"
@@ -633,6 +716,8 @@ function TyreForm({ form, setForm, save, close, locations, admin }) {
   );
 }
 function Details({ tyre, admin, view, completeShipping, cancelShipping, close, edit, remove, operate }) {
+  const images = imagesFor(tyre);
+  const [activeImage, setActiveImage] = useState(0);
   const tyreFacts = [
     ["Status", L[tyre.status]],
     ["Cena", `${tyre.sale_price} € / kom.`],
@@ -666,8 +751,29 @@ function Details({ tyre, admin, view, completeShipping, cancelShipping, close, e
             ×
           </button>
         </div>
-        {photoUrl(tyre.photo_path) && (
-          <img className="detail-photo" src={photoUrl(tyre.photo_path)} />
+        {images.length > 0 && (
+          <div className="image-gallery">
+            <img
+              className="detail-photo"
+              src={photoUrl(images[activeImage]?.path || images[0].path)}
+              alt={`${tyre.brand} ${tyre.model || "guma"}`}
+            />
+            {images.length > 1 && (
+              <div className="gallery-thumbnails">
+                {images.map((image, index) => (
+                  <button
+                    key={image.id || image.path}
+                    type="button"
+                    className={index === activeImage ? "is-active" : ""}
+                    aria-label={`Prikaži fotografiju ${index + 1}`}
+                    onClick={() => setActiveImage(index)}
+                  >
+                    <img src={photoUrl(image.path)} alt="" />
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
         )}
         <h3 className="tyre-detail-size">
           {tyre.width}/{tyre.profile} R{tyre.diameter}
