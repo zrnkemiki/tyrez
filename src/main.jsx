@@ -226,7 +226,14 @@ function App() {
   return (
     <main className="app-shell">
       <header className="topbar">
-        <Brand />
+        <Brand
+          onHome={() => {
+            setView("inventory");
+            setSelected(null);
+            setForm(null);
+            setOperation(null);
+          }}
+        />
         <nav className="app-nav">
           <button
             className={view === "inventory" ? "is-active" : ""}
@@ -338,9 +345,17 @@ function App() {
     </main>
   );
 }
-function Brand() {
+function Brand({ onHome }) {
   return (
-    <a className="brand" href="#">
+    <a
+      className="brand"
+      href="/"
+      onClick={(event) => {
+        if (!onHome) return;
+        event.preventDefault();
+        onHome();
+      }}
+    >
       <span>TZ</span>
       <strong>TyreZ</strong>
     </a>
