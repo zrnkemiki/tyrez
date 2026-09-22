@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { supabase } from "./supabase";
 import "./styles.css";
@@ -564,6 +564,9 @@ function Card({ tyre, open }) {
   );
 }
 function TyreForm({ form, setForm, save, close, locations, admin, saving, message }) {
+  const profileRef = useRef(null);
+  const diameterRef = useRef(null);
+  const treadRef = useRef(null);
   const existingImages = imagesFor(form);
   const pendingImages = form.photoFiles || [];
   const visibleImages = existingImages.filter(
@@ -584,6 +587,24 @@ function TyreForm({ form, setForm, save, close, locations, admin, saving, messag
       />
     </label>
   );
+  const Dimension = (label, key, length, nextRef, list) => (
+    <label>
+      {label}
+      <input
+        value={form[key] ?? ""}
+        list={list}
+        inputMode="numeric"
+        maxLength={length}
+        required
+        onChange={(event) => {
+          const value = event.target.value.replace(/\D/g, "").slice(0, length);
+          setForm({ ...form, [key]: value });
+          if (value.length === length)
+            requestAnimationFrame(() => nextRef.current?.focus());
+        }}
+      />
+    </label>
+  );
   return (
     <div className="backdrop">
       <form className="modal" onSubmit={save} aria-busy={saving}>
@@ -597,22 +618,51 @@ function TyreForm({ form, setForm, save, close, locations, admin, saving, messag
         <div className="form-grid">
           {I("Marka", "brand", { required: true })}
           {I("Model", "model")}
-          {I("Širina", "width", {
-            list: "widths",
-            inputMode: "numeric",
-            required: true,
-          })}
-          {I("Visina", "profile", {
-            list: "profiles",
-            inputMode: "numeric",
-            required: true,
-          })}
-          {I("Prečnik", "diameter", {
-            list: "diameters",
-            inputMode: "numeric",
-            required: true,
-          })}
-          {I("Šara (mm)", "tread_depth_mm", { type: "number", step: ".1" })}
+          {Dimension("Širina", "width", 3, profileRef, "widths")}
+          <label>
+            Visina
+            <input
+              ref={profileRef}
+              value={form.profile ?? ""}
+              list="profiles"
+              inputMode="numeric"
+              maxLength="2"
+              required
+              onChange={(event) => {
+                const value = event.target.value.replace(/\D/g, "").slice(0, 2);
+                setForm({ ...form, profile: value });
+                if (value.length === 2)
+                  requestAnimationFrame(() => diameterRef.current?.focus());
+              }}
+            />
+          </label>
+          <label>
+            Prečnik
+            <input
+              ref={diameterRef}
+              value={form.diameter ?? ""}
+              list="diameters"
+              inputMode="numeric"
+              maxLength="2"
+              required
+              onChange={(event) => {
+                const value = event.target.value.replace(/\D/g, "").slice(0, 2);
+                setForm({ ...form, diameter: value });
+                if (value.length === 2)
+                  requestAnimationFrame(() => treadRef.current?.focus());
+              }}
+            />
+          </label>
+          <label>
+            Šara (mm)
+            <input
+              ref={treadRef}
+              type="number"
+              step=".1"
+              value={form.tread_depth_mm ?? ""}
+              onChange={(event) => setForm({ ...form, tread_depth_mm: event.target.value })}
+            />
+          </label>
           <label>
             Sezona
             <select
