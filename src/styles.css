@@ -372,6 +372,7 @@ input[list]::-webkit-inner-spin-button {
   border-radius: 8px;
   font-size: 0.84rem;
 }
+.modal-message { margin: 16px 0 0; }
 .notice {
   padding: 10px 13px;
   background: #e7f5ec;

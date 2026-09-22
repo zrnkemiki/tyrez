@@ -340,7 +340,7 @@ function App() {
           </h1>
         </div>
         {view === "inventory" && (
-          <button className="primary" onClick={() => setForm({ ...empty })}>
+          <button className="primary" onClick={() => { setMsg(""); setForm({ ...empty }); }}>
             + Unesi gume
           </button>
         )}
@@ -363,6 +363,7 @@ function App() {
           locations={locations}
           admin={admin}
           saving={saving}
+          message={msg}
         />
       )}{" "}
       {selected && (
@@ -562,7 +563,7 @@ function Card({ tyre, open }) {
     </article>
   );
 }
-function TyreForm({ form, setForm, save, close, locations, admin, saving }) {
+function TyreForm({ form, setForm, save, close, locations, admin, saving, message }) {
   const existingImages = imagesFor(form);
   const pendingImages = form.photoFiles || [];
   const visibleImages = existingImages.filter(
@@ -592,6 +593,7 @@ function TyreForm({ form, setForm, save, close, locations, admin, saving }) {
             ×
           </button>
         </div>
+        {message && <p className="form-message modal-message">{message}</p>}
         <div className="form-grid">
           {I("Marka", "brand", { required: true })}
           {I("Model", "model")}
