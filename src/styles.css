@@ -520,6 +520,23 @@ body {
   border-radius: 9px;
   box-shadow: 0 4px 12px #177a522b;
 }
+.primary:disabled,
+.secondary:disabled {
+  cursor: wait;
+  opacity: .72;
+}
+.button-spinner {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  margin-right: 7px;
+  vertical-align: -2px;
+  border: 2px solid #ffffff70;
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: button-spin .7s linear infinite;
+}
+@keyframes button-spin { to { transform: rotate(360deg); } }
 .summary {
   display: grid;
   grid-template-columns: repeat(3, 1fr);

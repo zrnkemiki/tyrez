@@ -81,6 +81,7 @@ function App() {
     [selected, setSelected] = useState(null),
     [operation, setOperation] = useState(null),
     [msg, setMsg] = useState(""),
+    [saving, setSaving] = useState(false),
     [locations, setLocations] = useState([]);
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setSession(data.session));
@@ -131,6 +132,9 @@ function App() {
   }
   async function save(e) {
     e.preventDefault();
+    setSaving(true);
+    setMsg("");
+    try {
     const { photoFiles = [], images = [], removedImageIds = [], id, photo_path: oldPhotoPath, ...fields } = form;
     const keptImages = images.filter((image) => !removedImageIds.includes(image.id));
     if (keptImages.length + photoFiles.length > 6)
@@ -176,6 +180,11 @@ function App() {
     setForm(null);
     setMsg("Sačuvano.");
     load();
+    } catch (error) {
+      setMsg(error?.message || "Slike nisu uspešno sačuvane. Pokušajte ponovo.");
+    } finally {
+      setSaving(false);
+    }
   }
   async function remove(t) {
     if (!confirm(`Obrisati ${t.brand} ${t.width}/${t.profile} R${t.diameter}?`))
@@ -353,6 +362,7 @@ function App() {
           close={() => setForm(null)}
           locations={locations}
           admin={admin}
+          saving={saving}
         />
       )}{" "}
       {selected && (
@@ -552,7 +562,7 @@ function Card({ tyre, open }) {
     </article>
   );
 }
-function TyreForm({ form, setForm, save, close, locations, admin }) {
+function TyreForm({ form, setForm, save, close, locations, admin, saving }) {
   const existingImages = imagesFor(form);
   const pendingImages = form.photoFiles || [];
   const visibleImages = existingImages.filter(
@@ -575,7 +585,7 @@ function TyreForm({ form, setForm, save, close, locations, admin }) {
   );
   return (
     <div className="backdrop">
-      <form className="modal" onSubmit={save}>
+      <form className="modal" onSubmit={save} aria-busy={saving}>
         <div className="modal-heading">
           <h2>{form.id ? "Uredi gumu" : "Dodaj gume"}</h2>
           <button type="button" className="close" onClick={close}>
@@ -706,10 +716,12 @@ function TyreForm({ form, setForm, save, close, locations, admin }) {
           C / teretna guma
         </label>
         <div className="modal-actions">
-          <button type="button" className="secondary" onClick={close}>
+          <button type="button" className="secondary" onClick={close} disabled={saving}>
             Odustani
           </button>
-          <button className="primary">Sačuvaj</button>
+          <button className="primary" disabled={saving}>
+            {saving ? <><span className="button-spinner" aria-hidden="true" />Otpremanje slika…</> : "Sačuvaj"}
+          </button>
         </div>
       </form>
     </div>
