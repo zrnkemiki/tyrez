@@ -855,7 +855,7 @@ body {
   }
   .modal {
     width: 100%;
-    max-height: calc(100dvh - 14px);
+    max-height: 88dvh;
     padding: 18px 16px max(22px, env(safe-area-inset-bottom));
     border-radius: 20px 20px 0 0;
   }
@@ -879,6 +879,35 @@ body {
   }
   .modal .form-grid {
     margin-top: 18px;
+  }
+  .modal .detail-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .modal .detail-list div {
+    padding: 10px;
+  }
+  .modal .detail-list dt {
+    font-size: .69rem;
+  }
+  .modal .detail-list dd {
+    font-size: .88rem;
+    overflow-wrap: anywhere;
+  }
+  .modal .modal-actions {
+    position: sticky;
+    bottom: calc(-1 * max(22px, env(safe-area-inset-bottom)));
+    z-index: 2;
+    flex-wrap: wrap;
+    gap: 9px;
+    margin: 18px -16px 0;
+    padding: 13px 16px max(16px, env(safe-area-inset-bottom));
+    background: #fff;
+    border-top: 1px solid #edf1ed;
+  }
+  .modal .modal-actions button {
+    min-width: 0;
+    flex: 1 1 calc(50% - 5px);
+    padding: 10px 9px;
   }
   .panel {
     padding: 18px;
