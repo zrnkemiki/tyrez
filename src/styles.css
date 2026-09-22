@@ -231,8 +231,8 @@ input[list]::-webkit-inner-spin-button {
 }
 .detail-photo {
   width: 100%;
-  height: min(58vh, 520px);
-  max-height: 520px;
+  height: min(38vh, 320px);
+  max-height: 320px;
   object-fit: contain;
   background: #102c24;
   border-radius: 10px;
@@ -586,6 +586,15 @@ body {
   gap: 15px;
   align-items: center;
 }
+.modal .modal-heading {
+  position: sticky;
+  top: -25px;
+  z-index: 3;
+  margin: -25px -25px 0;
+  padding: 25px 25px 14px;
+  background: #fff;
+  border-bottom: 1px solid #edf1ed;
+}
 .panel h2,
 .results h2,
 .modal h2 {
@@ -865,7 +874,7 @@ body {
     place-items: end center;
     padding: 0;
   }
-  .modal-heading {
+  .modal .modal-heading {
     position: sticky;
     top: -18px;
     z-index: 2;
