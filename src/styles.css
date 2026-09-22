@@ -231,8 +231,10 @@ input[list]::-webkit-inner-spin-button {
 }
 .detail-photo {
   width: 100%;
-  max-height: 280px;
-  object-fit: cover;
+  height: min(58vh, 520px);
+  max-height: 520px;
+  object-fit: contain;
+  background: #102c24;
   border-radius: 10px;
   margin-top: 20px;
 }
@@ -882,6 +884,9 @@ body {
   }
   .modal .detail-list {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .modal .detail-photo {
+    height: min(42dvh, 310px);
   }
   .modal .detail-list div {
     padding: 10px;

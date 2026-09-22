@@ -39,12 +39,13 @@ const sizes = {
 
 async function shrink(file) {
   const image = await createImageBitmap(file);
-  const scale = Math.min(1, 1600 / Math.max(image.width, image.height));
+  // Dovoljno kvalitetno za pregled na većem ekranu, uz i dalje znatno manji fajl od originala.
+  const scale = Math.min(1, 2560 / Math.max(image.width, image.height));
   const c = document.createElement("canvas");
   c.width = Math.round(image.width * scale);
   c.height = Math.round(image.height * scale);
   c.getContext("2d").drawImage(image, 0, 0, c.width, c.height);
-  const blob = await new Promise((r) => c.toBlob(r, "image/webp", 0.78));
+  const blob = await new Promise((r) => c.toBlob(r, "image/webp", 0.86));
   return new File([blob], "tyre.webp", { type: "image/webp" });
 }
 const photoUrl = (p) =>
