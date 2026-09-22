@@ -222,9 +222,29 @@ function App() {
       <header className="topbar">
         <Brand />
         <nav className="app-nav">
-          <button onClick={() => setView("inventory")}>Lager</button>
-          <button onClick={() => setView("shipping")}>Za slanje</button>
-          {admin && <button onClick={() => setView("sold")}>Prodate</button>}
+          <button
+            className={view === "inventory" ? "is-active" : ""}
+            aria-current={view === "inventory" ? "page" : undefined}
+            onClick={() => setView("inventory")}
+          >
+            Lager
+          </button>
+          <button
+            className={view === "shipping" ? "is-active" : ""}
+            aria-current={view === "shipping" ? "page" : undefined}
+            onClick={() => setView("shipping")}
+          >
+            Za slanje
+          </button>
+          {admin && (
+            <button
+              className={view === "sold" ? "is-active" : ""}
+              aria-current={view === "sold" ? "page" : undefined}
+              onClick={() => setView("sold")}
+            >
+              Prodate
+            </button>
+          )}
           {admin && <Warehouse locations={locations} reload={load} />}
         </nav>
         <div className="profile">
