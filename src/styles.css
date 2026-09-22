@@ -836,7 +836,31 @@ body {
     grid-template-columns: 1fr;
   }
   .modal {
-    padding: 20px;
+    width: 100%;
+    max-height: calc(100dvh - 14px);
+    padding: 18px 16px max(22px, env(safe-area-inset-bottom));
+    border-radius: 20px 20px 0 0;
+  }
+  .backdrop {
+    place-items: end center;
+    padding: 0;
+  }
+  .modal-heading {
+    position: sticky;
+    top: -18px;
+    z-index: 2;
+    margin: -18px -16px 0;
+    padding: 18px 16px 13px;
+    background: #fff;
+    border-bottom: 1px solid #edf1ed;
+  }
+  .modal-heading .close {
+    width: 34px;
+    height: 34px;
+    flex: 0 0 34px;
+  }
+  .modal .form-grid {
+    margin-top: 18px;
   }
   .panel {
     padding: 18px;
