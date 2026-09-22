@@ -1,66 +1,24 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { createRoot } from 'react-dom/client'
+import { supabase } from './supabase'
 import './styles.css'
 
-const initialTyres = [
-  { id: 1, brand: 'Michelin', model: 'Alpin 6', width: '205', profile: '55', diameter: '16', season: 'Zimska', tread: '6.5 mm', quantity: 4, price: 68, commercial: false, status: 'Dostupno' },
-  { id: 2, brand: 'Continental', model: 'PremiumContact 6', width: '225', profile: '45', diameter: '17', season: 'Letnja', tread: '5.8 mm', quantity: 2, price: 75, commercial: false, status: 'Dostupno' },
-  { id: 3, brand: 'Goodyear', model: 'Cargo Vector 2', width: '195', profile: '75', diameter: '16', season: 'Celogodišnja', tread: '7.1 mm', quantity: 4, price: 82, commercial: true, status: 'Rezervisano' },
-]
+const labels={summer:'Letnja',winter:'Zimska',all_season:'Celogodišnja',available:'Dostupno',reserved:'Rezervisano',sold:'Prodato'}
+const demo=[{id:'1',brand:'Michelin',model:'Alpin 6',width:205,profile:55,diameter:16,season:'winter',tread_depth_mm:6.5,quantity:4,sale_price:68,is_commercial:false,status:'available',location:'A-03'},{id:'2',brand:'Continental',model:'PremiumContact 6',width:225,profile:45,diameter:17,season:'summer',tread_depth_mm:5.8,quantity:2,sale_price:75,is_commercial:false,status:'available',location:'B-01'},{id:'3',brand:'Goodyear',model:'Cargo Vector 2',width:195,profile:75,diameter:16,season:'all_season',tread_depth_mm:7.1,quantity:4,sale_price:82,is_commercial:true,status:'reserved',location:'C-06'}]
+const empty={brand:'',model:'',width:'',profile:'',diameter:'',season:'summer',tread_depth_mm:'',quantity:4,sale_price:'',purchase_price:'',location:'',is_commercial:false}
 
-function App() {
-  const [tyres, setTyres] = useState(initialTyres)
-  const [filters, setFilters] = useState({ width: '', profile: '', diameter: '', commercial: false })
-  const [showForm, setShowForm] = useState(false)
-  const [form, setForm] = useState({ brand: '', model: '', width: '', profile: '', diameter: '', season: 'Letnja', tread: '', quantity: 4, price: '', commercial: false })
-
-  const filtered = useMemo(() => tyres.filter((tyre) =>
-    (!filters.width || tyre.width === filters.width) &&
-    (!filters.profile || tyre.profile === filters.profile) &&
-    (!filters.diameter || tyre.diameter === filters.diameter) &&
-    (!filters.commercial || tyre.commercial)
-  ), [tyres, filters])
-
-  function addTyre(event) {
-    event.preventDefault()
-    setTyres((items) => [...items, { ...form, id: crypto.randomUUID(), price: Number(form.price), quantity: Number(form.quantity), status: 'Dostupno' }])
-    setForm({ brand: '', model: '', width: '', profile: '', diameter: '', season: 'Letnja', tread: '', quantity: 4, price: '', commercial: false })
-    setShowForm(false)
-  }
-
-  return <main className="app-shell">
-    <header className="topbar">
-      <a className="brand" href="#top" aria-label="TyreZ početna"><span>TZ</span><strong>TyreZ</strong></a>
-      <div className="profile"><span className="avatar">A</span><span><b>Admin</b><small>Radionica</small></span></div>
-    </header>
-    <section className="intro" id="top">
-      <div><p className="eyebrow">LAGER GUMA</p><h1>Gume na stanju</h1><p className="muted">Brzo pronađite odgovarajuću dimenziju ili unesite novi komplet.</p></div>
-      <button className="primary" onClick={() => setShowForm(true)}>+ Unesi gume</button>
-    </section>
-    <section className="summary">
-      <div><small>Kompleta na stanju</small><strong>{tyres.reduce((sum, tyre) => sum + Math.ceil(tyre.quantity / 4), 0)}</strong></div>
-      <div><small>Ukupno komada</small><strong>{tyres.reduce((sum, tyre) => sum + tyre.quantity, 0)}</strong></div>
-      <div><small>Rezervisano</small><strong>{tyres.filter((tyre) => tyre.status === 'Rezervisano').reduce((sum, tyre) => sum + tyre.quantity, 0)}</strong></div>
-    </section>
-    <section className="panel">
-      <div className="panel-heading"><div><h2>Pretraga po dimenziji</h2><p>Odaberite širinu, visinu i prečnik gume.</p></div><button className="text-button" onClick={() => setFilters({ width: '', profile: '', diameter: '', commercial: false })}>Obriši filtere</button></div>
-      <div className="filters">
-        <Filter label="Širina" value={filters.width} onChange={(width) => setFilters({ ...filters, width })} options={['195', '205', '225']} />
-        <Filter label="Visina" value={filters.profile} onChange={(profile) => setFilters({ ...filters, profile })} options={['45', '55', '75']} />
-        <Filter label="Prečnik" value={filters.diameter} onChange={(diameter) => setFilters({ ...filters, diameter })} options={['16', '17']} />
-        <label className="checkbox"><input type="checkbox" checked={filters.commercial} onChange={(event) => setFilters({ ...filters, commercial: event.target.checked })} /><span>Samo C / teretne gume</span></label>
-      </div>
-    </section>
-    <section className="results">
-      <div className="results-heading"><h2>Rezultati <span>{filtered.length}</span></h2><p>Prikazane su dostupne i rezervisane stavke iz lagera.</p></div>
-      <div className="cards">{filtered.map((tyre) => <TyreCard key={tyre.id} tyre={tyre} />)}{filtered.length === 0 && <div className="empty">Nema guma za izabranu dimenziju.</div>}</div>
-    </section>
-    {showForm && <div className="backdrop" role="presentation"><form className="modal" onSubmit={addTyre}><div className="modal-heading"><div><p className="eyebrow">NOVI UNOS</p><h2>Dodaj gume</h2></div><button type="button" className="close" onClick={() => setShowForm(false)} aria-label="Zatvori">×</button></div><div className="form-grid"><Input label="Marka" field="brand" form={form} setForm={setForm} required /><Input label="Model" field="model" form={form} setForm={setForm} /><Input label="Širina" field="width" form={form} setForm={setForm} required /><Input label="Visina" field="profile" form={form} setForm={setForm} required /><Input label="Prečnik (R)" field="diameter" form={form} setForm={setForm} required /><Input label="Dubina šare" field="tread" form={form} setForm={setForm} placeholder="npr. 6.2 mm" /><label>Sezona<select value={form.season} onChange={(e) => setForm({ ...form, season: e.target.value })}><option>Letnja</option><option>Zimska</option><option>Celogodišnja</option></select></label><Input label="Količina" field="quantity" type="number" form={form} setForm={setForm} required /><Input label="Prodajna cena (€)" field="price" type="number" form={form} setForm={setForm} required /></div><label className="checkbox form-check"><input type="checkbox" checked={form.commercial} onChange={(event) => setForm({ ...form, commercial: event.target.checked })} /><span>C / teretna guma</span></label><div className="modal-actions"><button type="button" className="secondary" onClick={() => setShowForm(false)}>Odustani</button><button className="primary" type="submit">Sačuvaj gume</button></div></form></div>}
-  </main>
-}
-
-function Filter({ label, value, onChange, options }) { return <label>{label}<select value={value} onChange={(event) => onChange(event.target.value)}><option value="">Sve</option>{options.map((option) => <option key={option}>{option}</option>)}</select></label> }
-function Input({ label, field, form, setForm, ...props }) { return <label>{label}<input value={form[field]} onChange={(event) => setForm({ ...form, [field]: event.target.value })} {...props} /></label> }
-function TyreCard({ tyre }) { return <article className="tyre-card"><div className="tyre-icon">◉</div><div className="tyre-info"><div className="card-top"><div><p className="tyre-name">{tyre.brand} <span>{tyre.model}</span></p><h3>{tyre.width} / {tyre.profile} R{tyre.diameter} {tyre.commercial && <em>C</em>}</h3></div><span className={`status ${tyre.status === 'Rezervisano' ? 'reserved' : ''}`}>{tyre.status}</span></div><p className="details">{tyre.season} · Šara {tyre.tread} · {tyre.quantity} kom.</p><div className="price-row"><strong>{tyre.price} € <small>/ kom.</small></strong><button className="card-action">Detalji</button></div></div></article> }
-
-createRoot(document.getElementById('root')).render(<App />)
+function App(){const [session,setSession]=useState(null),[profile,setProfile]=useState(null),[tyres,setTyres]=useState([]),[filter,setFilter]=useState({width:'',profile:'',diameter:'',c:false}),[selected,setSelected]=useState(null),[add,setAdd]=useState(false),[form,setForm]=useState(empty),[msg,setMsg]=useState(''),[loading,setLoading]=useState(true)
+useEffect(()=>{supabase.auth.getSession().then(({data})=>setSession(data.session));const {data:{subscription}}=supabase.auth.onAuthStateChange((_,s)=>setSession(s));return()=>subscription.unsubscribe()},[])
+useEffect(()=>{if(session)load();else setLoading(false)},[session])
+async function load(){setLoading(true);const {data:p}=await supabase.from('profiles').select('full_name,role').single();setProfile(p);const q=p?.role==='admin'?supabase.from('tyres').select('*').order('created_at',{ascending:false}):supabase.rpc('employee_inventory');const {data,error}=await q;if(error)setMsg(error.message);else setTyres(data||[]);setLoading(false)}
+async function save(e){e.preventDefault();const row={...form,width:+form.width,profile:+form.profile,diameter:+form.diameter,quantity:+form.quantity,sale_price:+form.sale_price,tread_depth_mm:form.tread_depth_mm?+form.tread_depth_mm:null,purchase_price:form.purchase_price?+form.purchase_price:null,created_by:session.user.id};const {error}=await supabase.from('tyres').insert(row);if(error)return setMsg(error.message);setAdd(false);setForm(empty);setMsg('Gume su dodate u lager.');load()}
+const shown=useMemo(()=>tyres.filter(t=>(!filter.width||String(t.width)===filter.width)&&(!filter.profile||String(t.profile)===filter.profile)&&(!filter.diameter||String(t.diameter)===filter.diameter)&&(!filter.c||t.is_commercial)),[tyres,filter])
+if(!session)return <Login onSession={setSession}/>
+const values=k=>[...new Set(tyres.map(t=>String(t[k])))].sort((a,b)=>a-b)
+return <main className="app-shell"><header className="topbar"><Brand/><div className="profile"><span className="avatar">{(profile?.full_name||session.user.email)[0].toUpperCase()}</span><span><b>{profile?.full_name||session.user.email}</b><small>{profile?.role==='admin'?'Admin':'Zaposleni'}</small></span><button className="text-button" onClick={()=>supabase.auth.signOut()}>Odjava</button></div></header>{msg&&<p className="notice">{msg}</p>}<section className="intro"><div><p className="eyebrow">LAGER GUMA</p><h1>Gume na stanju</h1><p className="muted">Brzo pronađite odgovarajuću dimenziju.</p></div><button className="primary" onClick={()=>setAdd(true)}>+ Unesi gume</button></section><section className="summary"><div><small>Kompleta na stanju</small><strong>{tyres.reduce((s,t)=>s+Math.ceil(t.quantity/4),0)}</strong></div><div><small>Ukupno komada</small><strong>{tyres.reduce((s,t)=>s+t.quantity,0)}</strong></div><div><small>Rezervisano</small><strong>{tyres.filter(t=>t.status==='reserved').reduce((s,t)=>s+t.quantity,0)}</strong></div></section><section className="panel"><div className="panel-heading"><div><h2>Pretraga po dimenziji</h2><p>Širina, visina i prečnik gume.</p></div><button className="text-button" onClick={()=>setFilter({width:'',profile:'',diameter:'',c:false})}>Obriši filtere</button></div><div className="filters">{[['Širina','width'],['Visina','profile'],['Prečnik','diameter']].map(([l,k])=><label key={k}>{l}<select value={filter[k]} onChange={e=>setFilter({...filter,[k]:e.target.value})}><option value="">Sve</option>{values(k).map(v=><option key={v}>{v}</option>)}</select></label>)}<label className="checkbox"><input type="checkbox" checked={filter.c} onChange={e=>setFilter({...filter,c:e.target.checked})}/><span>Samo C / teretne gume</span></label></div></section><section className="results"><div className="results-heading"><h2>Rezultati <span>{shown.length}</span></h2></div><div className="cards">{loading?<div className="empty">Učitavanje…</div>:shown.map(t=><Card key={t.id} tyre={t} detail={()=>setSelected(t)}/>)}{!loading&&!shown.length&&<div className="empty">Nema guma za izabranu dimenziju.</div>}</div></section>{add&&<TyreForm form={form} setForm={setForm} save={save} close={()=>setAdd(false)} admin={profile?.role==='admin'}/>} {selected&&<Details tyre={selected} admin={profile?.role==='admin'} close={()=>setSelected(null)}/>}</main>}
+function Brand(){return <a className="brand" href="#"><span>TZ</span><strong>TyreZ</strong></a>}
+function Login({onSession}){const[email,setEmail]=useState(''),[password,setPassword]=useState(''),[name,setName]=useState(''),[signup,setSignup]=useState(false),[msg,setMsg]=useState('');async function go(e){e.preventDefault();const r=signup?await supabase.auth.signUp({email,password,options:{data:{full_name:name}}}):await supabase.auth.signInWithPassword({email,password});if(r.error)setMsg(r.error.message);else if(r.data.session)onSession(r.data.session);else setMsg('Potvrdite nalog preko email-a, pa se prijavite.')}return <main className="login-page"><section className="login-card"><Brand/><p className="eyebrow">TYREZ RADIONICA</p><h1>{signup?'Kreiraj nalog':'Prijava'}</h1><form onSubmit={go}>{signup&&<label>Ime<input required value={name} onChange={e=>setName(e.target.value)}/></label>}<label>Email<input required type="email" value={email} onChange={e=>setEmail(e.target.value)}/></label><label>Lozinka<input required minLength="6" type="password" value={password} onChange={e=>setPassword(e.target.value)}/></label>{msg&&<p className="form-message">{msg}</p>}<button className="primary full">{signup?'Kreiraj nalog':'Prijavi se'}</button></form><button className="text-button auth-switch" onClick={()=>setSignup(!signup)}>{signup?'Već imaš nalog? Prijavi se':'Nemaš nalog? Kreiraj ga'}</button></section></main>}
+function Card({tyre,detail}){return <article className="tyre-card"><div className="tyre-icon">◉</div><div className="tyre-info"><div className="card-top"><div><p className="tyre-name">{tyre.brand} <span>{tyre.model}</span></p><h3>{tyre.width} / {tyre.profile} R{tyre.diameter} {tyre.is_commercial&&<em>C</em>}</h3></div><span className={'status '+(tyre.status==='reserved'?'reserved':'')}>{labels[tyre.status]}</span></div><p className="details">{labels[tyre.season]} · Šara {tyre.tread_depth_mm??'—'} mm · {tyre.quantity} kom.</p><div className="price-row"><strong>{tyre.sale_price} € <small>/ kom.</small></strong><button className="card-action" onClick={detail}>Detalji</button></div></div></article>}
+function TyreForm({form,setForm,save,close,admin}){const I=(l,k,p={})=><label>{l}<input value={form[k]} onChange={e=>setForm({...form,[k]:e.target.value})} {...p}/></label>;return <div className="backdrop"><form className="modal" onSubmit={save}><div className="modal-heading"><h2>Dodaj gume</h2><button type="button" className="close" onClick={close}>×</button></div><div className="form-grid">{I('Marka','brand',{required:true})}{I('Model','model')}{I('Širina','width',{type:'number',required:true})}{I('Visina','profile',{type:'number',required:true})}{I('Prečnik','diameter',{type:'number',required:true})}{I('Šara (mm)','tread_depth_mm',{type:'number',step:'.1'})}<label>Sezona<select value={form.season} onChange={e=>setForm({...form,season:e.target.value})}><option value="summer">Letnja</option><option value="winter">Zimska</option><option value="all_season">Celogodišnja</option></select></label>{I('Količina','quantity',{type:'number',min:'1'})}{I('Prodajna cena (€)','sale_price',{type:'number',required:true})}{admin&&I('Nabavna cena (€)','purchase_price',{type:'number'})}{I('Lokacija','location')}</div><label className="checkbox form-check"><input type="checkbox" checked={form.is_commercial} onChange={e=>setForm({...form,is_commercial:e.target.checked})}/><span>C / teretna guma</span></label><div className="modal-actions"><button type="button" className="secondary" onClick={close}>Odustani</button><button className="primary">Sačuvaj</button></div></form></div>}
+function Details({tyre,admin,close}){return <div className="backdrop"><section className="modal"><div className="modal-heading"><div><p className="eyebrow">DETALJI GUME</p><h2>{tyre.brand} {tyre.model}</h2></div><button className="close" onClick={close}>×</button></div><h3 className="tyre-detail-size">{tyre.width} / {tyre.profile} R{tyre.diameter} {tyre.is_commercial&&'C'}</h3><dl className="detail-list">{[['Status',labels[tyre.status]],['Sezona',labels[tyre.season]],['Dubina šare',`${tyre.tread_depth_mm??'—'} mm`],['Količina',`${tyre.quantity} kom.`],['Lokacija',tyre.location||'Nije uneta'],['Prodajna cena',`${tyre.sale_price} € / kom.`],...(admin?[['Nabavna cena',tyre.purchase_price?`${tyre.purchase_price} € / kom.`:'Nije uneta']]:[])].map(([k,v])=><div key={k}><dt>{k}</dt><dd>{v}</dd></div>)}</dl></section></div>}
+createRoot(document.getElementById('root')).render(<App/>)
