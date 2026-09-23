@@ -214,6 +214,24 @@ input[list]::-webkit-inner-spin-button {
   border-radius: 8px;
   font: inherit;
 }
+.settings-description { margin: 18px 0; }
+.settings-season {
+  display: block;
+  color: #47544d;
+  font-size: .8rem;
+  font-weight: 700;
+}
+.settings-season select {
+  display: block;
+  width: 100%;
+  margin-top: 7px;
+  padding: 11px;
+  border: 1px solid #dce4dd;
+  border-radius: 8px;
+  background: #f7f9f7;
+  color: #17251f;
+  font: 500 .9rem "DM Sans";
+}
 .brand-logo {
   width: 34px;
   height: 34px;

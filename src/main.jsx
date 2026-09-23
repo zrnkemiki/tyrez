@@ -96,7 +96,8 @@ function App() {
     [operation, setOperation] = useState(null),
     [msg, setMsg] = useState(""),
     [saving, setSaving] = useState(false),
-    [locations, setLocations] = useState([]);
+    [locations, setLocations] = useState([]),
+    [settings, setSettings] = useState({ default_season: "summer" });
   useScrollLock(Boolean(form || selected || operation));
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setSession(data.session));
@@ -121,7 +122,7 @@ function App() {
             .select("*")
             .order("created_at", { ascending: false })
         : supabase.rpc("employee_inventory");
-    const [{ data, error }, { data: loc }, { data: imageRows, error: imagesError }] = await Promise.all([
+    const [{ data, error }, { data: loc }, { data: imageRows, error: imagesError }, { data: workshopSettings, error: settingsError }] = await Promise.all([
       q,
       supabase
         .from("warehouse_locations")
@@ -133,6 +134,11 @@ function App() {
         .select("id,tyre_id,path,sort_order,created_at")
         .order("sort_order")
         .order("created_at"),
+      supabase
+        .from("workshop_settings")
+        .select("default_season")
+        .eq("id", true)
+        .maybeSingle(),
     ]);
     if (error) setMsg(error.message);
     else {
@@ -143,6 +149,8 @@ function App() {
       setTyres((data || []).map((tyre) => ({ ...tyre, images: byTyreId.get(tyre.id) || [] })));
     }
     if (imagesError) setMsg("Pokrenite SQL migraciju 008_tyre_image_gallery.sql, pa osvežite stranicu.");
+    if (settingsError) setMsg("Pokrenite SQL migraciju 014_default_season_setting.sql, pa osvežite stranicu.");
+    else if (workshopSettings) setSettings(workshopSettings);
     setLocations(loc || []);
   }
   async function save(e) {
@@ -340,6 +348,7 @@ function App() {
             </button>
           )}
           {admin && <Warehouse locations={locations} reload={load} />}
+          {admin && <Settings settings={settings} reload={load} />}
         </nav>
         <div className="profile">
           <span className="avatar">
@@ -380,7 +389,7 @@ function App() {
           </h1>
         </div>
         {view === "inventory" && (
-          <button className="primary" onClick={() => { setMsg(""); setForm({ ...empty }); }}>
+          <button className="primary" onClick={() => { setMsg(""); setForm({ ...empty, season: settings.default_season || "summer" }); }}>
             + Unesi gume
           </button>
         )}
@@ -1297,6 +1306,55 @@ function Warehouse({ locations, reload }) {
                 </button>
               )}
               <button className="primary">{editing ? "Sačuvaj izmene" : "Dodaj lokaciju"}</button>
+            </div>
+          </form>
+        </div>
+      )}
+    </>
+  );
+}
+function Settings({ settings, reload }) {
+  const [open, setOpen] = useState(false);
+  const [season, setSeason] = useState(settings.default_season || "summer");
+  const [message, setMessage] = useState("");
+  useScrollLock(open);
+  async function save(e) {
+    e.preventDefault();
+    const { error } = await supabase
+      .from("workshop_settings")
+      .update({ default_season: season, updated_at: new Date().toISOString() })
+      .eq("id", true);
+    if (error) return setMessage(error.message);
+    setMessage("Podrazumevana sezona je sačuvana.");
+    reload();
+  }
+  return (
+    <>
+      <button onClick={() => { setSeason(settings.default_season || "summer"); setMessage(""); setOpen(true); }}>
+        Podešavanja
+      </button>
+      {open && (
+        <div className="backdrop">
+          <form className="modal settings-modal" onSubmit={save}>
+            <div className="modal-heading">
+              <h2>Podešavanja unosa</h2>
+              <button className="close" type="button" onClick={() => setOpen(false)}>×</button>
+            </div>
+            {message && <p className="form-message modal-message">{message}</p>}
+            <p className="muted settings-description">
+              Ova sezona se automatski bira pri svakom novom unosu gume.
+            </p>
+            <label className="settings-season">
+              Podrazumevana sezona
+              <select value={season} onChange={(event) => setSeason(event.target.value)}>
+                <option value="summer">Letnja</option>
+                <option value="winter">Zimska</option>
+                <option value="all_season">Celogodišnja</option>
+              </select>
+            </label>
+            <div className="modal-actions">
+              <button type="button" className="secondary" onClick={() => setOpen(false)}>Zatvori</button>
+              <button className="primary">Sačuvaj</button>
             </div>
           </form>
         </div>
