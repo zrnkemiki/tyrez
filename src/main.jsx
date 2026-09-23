@@ -107,6 +107,8 @@ function App() {
     [tyres, setTyres] = useState([]),
     [view, setView] = useState("inventory"),
     [filters, setFilters] = useState({
+      brand: "",
+      season: "",
       width: "",
       profile: "",
       diameter: "",
@@ -308,6 +310,8 @@ function App() {
           return false;
         if (view === "sold" && t.status !== "sold") return false;
         if (view === "inventory" && (t.status === "sold" || t.shipment_required)) return false;
+        if (filters.brand && t.brand !== filters.brand) return false;
+        if (filters.season && t.season !== filters.season) return false;
         if (filters.width && String(t.width) !== filters.width) return false;
         if (filters.profile && String(t.profile) !== filters.profile)
           return false;
@@ -422,7 +426,7 @@ function App() {
         <Reports tyres={tyres} filters={reportFilters} setFilters={setReportFilters} />
       ) : (
         <>
-          <Filters f={filters} setF={setFilters} sold={view === "sold"} />
+          <Filters f={filters} setF={setFilters} sold={view === "sold"} brands={[...new Set(tyres.map((tyre) => tyre.brand).filter(Boolean))].sort()} />
           <div className="cards">
             {visible.map((t) => (
               <Card key={t.id} tyre={t} open={() => setSelected(t)} />
@@ -557,18 +561,34 @@ function Login({ onSession }) {
     </main>
   );
 }
-function Filters({ f, setF, sold }) {
+function Filters({ f, setF, sold, brands }) {
   const reset = () =>
-    setF({ width: "", profile: "", diameter: "", c: false, from: "", to: "" });
+    setF({ brand: "", season: "", width: "", profile: "", diameter: "", c: false, from: "", to: "" });
   return (
     <section className="panel filters-panel">
       <div className="filters-heading">
-        <span>Pretraga po dimenziji</span>
+        <span>Pretraga lagera</span>
         <button type="button" className="text-button reset-filters" onClick={reset}>
           Resetuj filtere
         </button>
       </div>
       <div className="filters">
+        <label>
+          Marka
+          <select value={f.brand} onChange={(event) => setF({ ...f, brand: event.target.value })}>
+            <option value="">Sve marke</option>
+            {brands.map((brand) => <option key={brand} value={brand}>{brand}</option>)}
+          </select>
+        </label>
+        <label>
+          Sezona
+          <select value={f.season} onChange={(event) => setF({ ...f, season: event.target.value })}>
+            <option value="">Sve sezone</option>
+            <option value="summer">Letnja</option>
+            <option value="winter">Zimska</option>
+            <option value="all_season">Celogodišnja</option>
+          </select>
+        </label>
         {[
           ["Širina", "width"],
           ["Visina", "profile"],

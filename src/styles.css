@@ -678,7 +678,7 @@ body {
 }
 .filters {
   display: grid;
-  grid-template-columns: repeat(3, 1fr) 1.35fr;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 14px;
   margin-top: 21px;
 }
