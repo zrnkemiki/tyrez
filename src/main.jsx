@@ -735,6 +735,7 @@ function TyreForm({ form, setForm, save, close, locations, admin, saving, messag
   const profileRef = useRef(null);
   const diameterRef = useRef(null);
   const treadRef = useRef(null);
+  const dotRef = useRef(null);
   const existingImages = imagesFor(form);
   const pendingImages = form.photoFiles || [];
   const visibleImages = existingImages.filter(
@@ -828,12 +829,18 @@ function TyreForm({ form, setForm, save, close, locations, admin, saving, messag
               type="number"
               step=".1"
               value={form.tread_depth_mm ?? ""}
-              onChange={(event) => setForm({ ...form, tread_depth_mm: event.target.value })}
+              onChange={(event) => {
+                const value = event.target.value;
+                setForm({ ...form, tread_depth_mm: value });
+                if (/^\d{1,2}\.\d$/.test(value))
+                  requestAnimationFrame(() => dotRef.current?.focus());
+              }}
             />
           </label>
           <label>
             DOT (4 cifre)
             <input
+              ref={dotRef}
               value={form.dot ?? ""}
               inputMode="numeric"
               maxLength="4"
