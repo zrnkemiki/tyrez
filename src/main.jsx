@@ -198,6 +198,7 @@ function App() {
   }
   async function applyOperation(data) {
     const { t, status, shipment_required, ...customer } = data;
+    if (status === "sold" && !(await removeTyreImages(t))) return;
     const payload = { status, shipment_required, ...customer };
     if (status === "sold") payload.sold_at = new Date().toISOString();
     if (status === "reserved") payload.reserved_at = new Date().toISOString();
@@ -211,6 +212,7 @@ function App() {
     load();
   }
   async function completeShipping(t) {
+    if (!(await removeTyreImages(t))) return;
     const { error } = await supabase
       .from("tyres")
       .update({
@@ -238,6 +240,16 @@ function App() {
     if (error) return setMsg(error.message);
     setSelected(null);
     load();
+  }
+  async function removeTyreImages(t) {
+    const paths = [...new Set([...imagesFor(t).map((image) => image.path), t.photo_path].filter(Boolean))];
+    if (!paths.length) return true;
+    const { error } = await supabase.storage.from("tyre-images").remove(paths);
+    if (error) {
+      setMsg(error.message);
+      return false;
+    }
+    return true;
   }
   const visible = useMemo(
     () =>
