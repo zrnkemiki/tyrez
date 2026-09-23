@@ -97,7 +97,7 @@ function App() {
     [msg, setMsg] = useState(""),
     [saving, setSaving] = useState(false),
     [locations, setLocations] = useState([]),
-    [settings, setSettings] = useState({ default_season: "summer" });
+    [settings, setSettings] = useState({ default_season: "summer", default_width: null, default_profile: null, default_diameter: null });
   useScrollLock(Boolean(form || selected || operation));
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setSession(data.session));
@@ -136,7 +136,7 @@ function App() {
         .order("created_at"),
       supabase
         .from("workshop_settings")
-        .select("default_season")
+        .select("default_season,default_width,default_profile,default_diameter")
         .eq("id", true)
         .maybeSingle(),
     ]);
@@ -389,7 +389,7 @@ function App() {
           </h1>
         </div>
         {view === "inventory" && (
-          <button className="primary" onClick={() => { setMsg(""); setForm({ ...empty, season: settings.default_season || "summer" }); }}>
+          <button className="primary" onClick={() => { setMsg(""); setForm({ ...empty, season: settings.default_season || "summer", width: settings.default_width || "", profile: settings.default_profile || "", diameter: settings.default_diameter || "" }); }}>
             + Unesi gume
           </button>
         )}
@@ -1315,14 +1315,25 @@ function Warehouse({ locations, reload }) {
 }
 function Settings({ settings, reload }) {
   const [open, setOpen] = useState(false);
-  const [season, setSeason] = useState(settings.default_season || "summer");
+  const [defaults, setDefaults] = useState({
+    season: settings.default_season || "summer",
+    width: String(settings.default_width || ""),
+    profile: String(settings.default_profile || ""),
+    diameter: String(settings.default_diameter || ""),
+  });
   const [message, setMessage] = useState("");
   useScrollLock(open);
   async function save(e) {
     e.preventDefault();
     const { error } = await supabase
       .from("workshop_settings")
-      .update({ default_season: season, updated_at: new Date().toISOString() })
+      .update({
+        default_season: defaults.season,
+        default_width: defaults.width ? Number(defaults.width) : null,
+        default_profile: defaults.profile ? Number(defaults.profile) : null,
+        default_diameter: defaults.diameter ? Number(defaults.diameter) : null,
+        updated_at: new Date().toISOString(),
+      })
       .eq("id", true);
     if (error) return setMessage(error.message);
     setMessage("Podrazumevana sezona je sačuvana.");
@@ -1330,7 +1341,16 @@ function Settings({ settings, reload }) {
   }
   return (
     <>
-      <button onClick={() => { setSeason(settings.default_season || "summer"); setMessage(""); setOpen(true); }}>
+      <button onClick={() => {
+        setDefaults({
+          season: settings.default_season || "summer",
+          width: String(settings.default_width || ""),
+          profile: String(settings.default_profile || ""),
+          diameter: String(settings.default_diameter || ""),
+        });
+        setMessage("");
+        setOpen(true);
+      }}>
         Podešavanja
       </button>
       {open && (
@@ -1342,16 +1362,31 @@ function Settings({ settings, reload }) {
             </div>
             {message && <p className="form-message modal-message">{message}</p>}
             <p className="muted settings-description">
-              Ova sezona se automatski bira pri svakom novom unosu gume.
+              Izabrane vrednosti se automatski popunjavaju pri svakom novom unosu gume.
             </p>
             <label className="settings-season">
               Podrazumevana sezona
-              <select value={season} onChange={(event) => setSeason(event.target.value)}>
+              <select value={defaults.season} onChange={(event) => setDefaults({ ...defaults, season: event.target.value })}>
                 <option value="summer">Letnja</option>
                 <option value="winter">Zimska</option>
                 <option value="all_season">Celogodišnja</option>
               </select>
             </label>
+            <div className="settings-dimensions">
+              {[
+                ["Širina", "width"],
+                ["Visina", "profile"],
+                ["Prečnik", "diameter"],
+              ].map(([label, key]) => (
+                <label key={key}>
+                  Podrazumevana {label.toLowerCase()}
+                  <select value={defaults[key]} onChange={(event) => setDefaults({ ...defaults, [key]: event.target.value })}>
+                    <option value="">Bez podrazumevane vrednosti</option>
+                    {sizes[key].map((value) => <option key={value} value={value}>{value}</option>)}
+                  </select>
+                </label>
+              ))}
+            </div>
             <div className="modal-actions">
               <button type="button" className="secondary" onClick={() => setOpen(false)}>Zatvori</button>
               <button className="primary">Sačuvaj</button>

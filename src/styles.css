@@ -232,6 +232,31 @@ input[list]::-webkit-inner-spin-button {
   color: #17251f;
   font: 500 .9rem "DM Sans";
 }
+.settings-dimensions {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-top: 15px;
+}
+.settings-dimensions label {
+  color: #47544d;
+  font-size: .74rem;
+  font-weight: 700;
+}
+.settings-dimensions select {
+  display: block;
+  width: 100%;
+  margin-top: 6px;
+  padding: 10px 8px;
+  border: 1px solid #dce4dd;
+  border-radius: 8px;
+  background: #f7f9f7;
+  color: #17251f;
+  font: 500 .83rem "DM Sans";
+}
+@media (max-width: 520px) {
+  .settings-dimensions { grid-template-columns: 1fr; }
+}
 .brand-logo {
   width: 34px;
   height: 34px;
