@@ -708,7 +708,7 @@ function TyreForm({ form, setForm, save, close, locations, admin, saving, messag
             </select>
           </label>
           {I("Količina", "quantity", { type: "number", min: "1" })}
-          {I("Prodajna cena (€)", "sale_price", {
+          {I("Prodajna cena po komadu (€)", "sale_price", {
             type: "number",
             required: true,
           })}
