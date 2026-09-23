@@ -136,6 +136,34 @@ body .admin-settings-button {
 .location-list span {
   color: #4d5c54;
 }
+.warehouse-list {
+  display: grid;
+  gap: 8px;
+  max-height: 230px;
+  margin-top: 18px;
+  overflow: auto;
+}
+.warehouse-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  align-items: center;
+  padding: 11px 12px;
+  border: 1px solid #e0e8e1;
+  border-radius: 9px;
+  background: #f9fbf9;
+}
+.warehouse-row strong,
+.warehouse-row span { display: block; }
+.warehouse-row strong { color: #177a52; font-size: .86rem; }
+.warehouse-row span { margin-top: 3px; color: #66736c; font-size: .78rem; }
+.warehouse-actions { display: flex; gap: 7px; }
+.warehouse-actions button { padding: 8px 10px; font-size: .78rem; }
+@media (max-width: 520px) {
+  .warehouse-row { align-items: flex-start; flex-direction: column; }
+  .warehouse-actions { width: 100%; }
+  .warehouse-actions button { flex: 1; }
+}
 @media (max-width: 520px) {
   .warehouse-button {
     right: 14px;

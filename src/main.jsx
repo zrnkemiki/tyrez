@@ -977,21 +977,66 @@ function CustomerOperation({ operation, close, save }) {
 }
 function Warehouse({ locations, reload }) {
   const [open, setOpen] = useState(false),
-    [f, setF] = useState({ code: "", name: "" });
-  async function add(e) {
-    e.preventDefault();
-    await supabase
+    [f, setF] = useState({ code: "", name: "" }),
+    [catalog, setCatalog] = useState([]),
+    [editing, setEditing] = useState(null),
+    [message, setMessage] = useState("");
+  async function loadCatalog() {
+    const { data, error } = await supabase
       .from("warehouse_locations")
-      .insert({ ...f, code: f.code.toUpperCase() });
+      .select("id,code,name,active")
+      .order("code");
+    if (error) setMessage(error.message);
+    else setCatalog(data || []);
+  }
+  async function openCatalog() {
+    setOpen(true);
+    setMessage("");
+    await loadCatalog();
+  }
+  async function saveLocation(e) {
+    e.preventDefault();
+    const code = f.code.trim().toUpperCase();
+    const name = f.name.trim();
+    if (!code || !name) return;
+    const request = editing
+      ? supabase
+          .from("warehouse_locations")
+          .update({ code, name })
+          .eq("id", editing.id)
+      : supabase.from("warehouse_locations").insert({ code, name });
+    const { error } = await request;
+    if (error) return setMessage(error.message);
+    if (editing && editing.code !== code) {
+      const { error: tyreError } = await supabase
+        .from("tyres")
+        .update({ location: code })
+        .eq("location", editing.code);
+      if (tyreError) return setMessage(tyreError.message);
+    }
     setF({ code: "", name: "" });
+    setEditing(null);
+    setMessage("Sačuvano.");
     reload();
+    loadCatalog();
+  }
+  async function removeLocation(location) {
+    if (!confirm(`Obrisati magacin „${location.code}“? Gume zadržavaju istorijsku oznaku lokacije.`)) return;
+    const { error } = await supabase
+      .from("warehouse_locations")
+      .delete()
+      .eq("id", location.id);
+    if (error) return setMessage(error.message);
+    setMessage("Magacin je obrisan.");
+    reload();
+    loadCatalog();
   }
   return (
     <>
-      <button onClick={() => setOpen(true)}>Magacin</button>
+      <button onClick={openCatalog}>Magacin</button>
       {open && (
         <div className="backdrop">
-          <form className="modal" onSubmit={add}>
+          <form className="modal warehouse-modal" onSubmit={saveLocation}>
             <div className="modal-heading">
               <h2>Šifarnik magacina</h2>
               <button
@@ -1002,9 +1047,37 @@ function Warehouse({ locations, reload }) {
                 ×
               </button>
             </div>
+            {message && <p className="form-message modal-message">{message}</p>}
+            <div className="warehouse-list">
+              {!catalog.length && <p className="muted">Nema unetih magacina.</p>}
+              {catalog.map((location) => (
+                <div key={location.id} className="warehouse-row">
+                  <div>
+                    <strong>{location.code}</strong>
+                    <span>{location.name}</span>
+                  </div>
+                  <div className="warehouse-actions">
+                    <button
+                      type="button"
+                      className="secondary"
+                      onClick={() => {
+                        setEditing(location);
+                        setF({ code: location.code, name: location.name });
+                        setMessage("");
+                      }}
+                    >
+                      Uredi
+                    </button>
+                    <button type="button" className="danger" onClick={() => removeLocation(location)}>
+                      Obriši
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
             <div className="form-grid">
               <label>
-                Šifra
+                Šifra {editing && "magacina"}
                 <input
                   required
                   value={f.code}
@@ -1021,7 +1094,19 @@ function Warehouse({ locations, reload }) {
               </label>
             </div>
             <div className="modal-actions">
-              <button className="primary">Dodaj lokaciju</button>
+              {editing && (
+                <button
+                  type="button"
+                  className="secondary"
+                  onClick={() => {
+                    setEditing(null);
+                    setF({ code: "", name: "" });
+                  }}
+                >
+                  Odustani
+                </button>
+              )}
+              <button className="primary">{editing ? "Sačuvaj izmene" : "Dodaj lokaciju"}</button>
             </div>
           </form>
         </div>
