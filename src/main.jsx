@@ -38,6 +38,20 @@ const sizes = {
   profile: [25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80, 85],
   diameter: [12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22],
 };
+const tyreCatalog = {
+  Michelin: ["Pilot Sport 5", "Primacy 4+", "Alpin 6", "CrossClimate 2", "Energy Saver+"],
+  Continental: ["PremiumContact 7", "EcoContact 6", "WinterContact TS 870", "AllSeasonContact 2"],
+  Goodyear: ["EfficientGrip Performance 2", "Eagle F1 Asymmetric 6", "UltraGrip Performance+", "Vector 4Seasons Gen-3"],
+  Pirelli: ["P Zero", "Cinturato P7", "Cinturato All Season SF 3", "Scorpion Verde"],
+  Bridgestone: ["Turanza T005", "Potenza Sport", "Blizzak LM005", "Weather Control A005"],
+  Dunlop: ["Sport BluResponse", "SP Sport Maxx", "Winter Sport 5"],
+  Hankook: ["Ventus Prime 4", "Ventus S1 evo3", "Winter i*cept RS3", "Vantra LT"],
+  Kumho: ["Ecsta HS52", "Solus 4S HA32", "WinterCraft WP52"],
+  Nexen: ["N Blue 4Season", "N Fera Sport", "Winguard Sport 2"],
+  Tigar: ["High Performance", "Wintera", "Touring"],
+  Sava: ["Intensa HP2", "Eskimo HP2", "All Weather"],
+  Barum: ["Bravuris 5HM", "Polaris 5", "Quartaris 5"],
+};
 
 async function shrink(file) {
   const image = await createImageBitmap(file);
@@ -746,6 +760,12 @@ function TyreForm({ form, setForm, save, close, locations, admin, saving, messag
   const treadRef = useRef(null);
   const dotRef = useRef(null);
   const existingImages = imagesFor(form);
+  const matchedBrand = Object.keys(tyreCatalog).find(
+    (brand) => brand.toLowerCase() === (form.brand || "").trim().toLowerCase(),
+  );
+  const modelChoices = matchedBrand
+    ? tyreCatalog[matchedBrand]
+    : [...new Set(Object.values(tyreCatalog).flat())];
   const pendingImages = form.photoFiles || [];
   const visibleImages = existingImages.filter(
     (image) => !form.removedImageIds?.includes(image.id),
@@ -794,8 +814,8 @@ function TyreForm({ form, setForm, save, close, locations, admin, saving, messag
         </div>
         {message && <p className="form-message modal-message">{message}</p>}
         <div className="form-grid">
-          {I("Marka", "brand", { required: true })}
-          {I("Model", "model")}
+          {I("Marka", "brand", { required: true, list: "tyre-brands" })}
+          {I("Model (opciono)", "model", { list: "tyre-models" })}
           {Dimension("Širina", "width", 3, profileRef, "widths")}
           <label>
             Visina
@@ -916,6 +936,12 @@ function TyreForm({ form, setForm, save, close, locations, admin, saving, messag
           {sizes.diameter.map((x) => (
             <option key={x} value={x} />
           ))}
+        </datalist>
+        <datalist id="tyre-brands">
+          {Object.keys(tyreCatalog).map((brand) => <option key={brand} value={brand} />)}
+        </datalist>
+        <datalist id="tyre-models">
+          {modelChoices.map((model) => <option key={model} value={model} />)}
         </datalist>
         <label className="photo-upload">
           Fotografije <small>(najviše 6)</small>
