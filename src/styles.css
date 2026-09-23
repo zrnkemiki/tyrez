@@ -639,6 +639,20 @@ body {
   gap: 14px;
   margin-top: 21px;
 }
+.filters-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  color: #385248;
+  font-size: .82rem;
+  font-weight: 700;
+}
+.reset-filters {
+  padding: 4px 0;
+  font-size: .8rem;
+  white-space: nowrap;
+}
 .filters label,
 .form-grid label {
   font-size: 0.78rem;
@@ -876,6 +890,7 @@ body {
   .filters {
     grid-template-columns: repeat(2, 1fr);
   }
+  .filters-heading { align-items: flex-start; }
   .filters .checkbox {
     grid-column: 1/-1;
     padding-top: 5px;

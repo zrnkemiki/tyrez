@@ -491,8 +491,16 @@ function Login({ onSession }) {
   );
 }
 function Filters({ f, setF, sold }) {
+  const reset = () =>
+    setF({ width: "", profile: "", diameter: "", c: false, from: "", to: "" });
   return (
     <section className="panel filters-panel">
+      <div className="filters-heading">
+        <span>Pretraga po dimenziji</span>
+        <button type="button" className="text-button reset-filters" onClick={reset}>
+          Resetuj filtere
+        </button>
+      </div>
       <div className="filters">
         {[
           ["Širina", "width"],
