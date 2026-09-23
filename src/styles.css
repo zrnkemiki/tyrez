@@ -672,6 +672,31 @@ body {
   color: #17251f;
   font: 500 0.9rem "DM Sans";
 }
+.note-field {
+  display: block;
+  margin-top: 16px;
+  color: #47544d;
+  font-size: .78rem;
+  font-weight: 600;
+}
+.note-field textarea {
+  display: block;
+  width: 100%;
+  min-height: 78px;
+  margin-top: 6px;
+  padding: 10px;
+  resize: vertical;
+  border: 1px solid #dce4dd;
+  border-radius: 7px;
+  background: #f7f9f7;
+  color: #17251f;
+  font: 500 .9rem "DM Sans";
+}
+.note-field textarea:focus {
+  outline: 3px solid #74bf9a35;
+  border-color: #299060;
+  background: #fff;
+}
 .checkbox {
   display: flex;
   gap: 9px;

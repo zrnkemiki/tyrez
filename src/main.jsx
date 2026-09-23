@@ -22,6 +22,7 @@ const empty = {
   quantity: 4,
   sale_price: "",
   purchase_price: "",
+  note: "",
   location: "",
   is_commercial: false,
   photoFiles: [],
@@ -725,6 +726,15 @@ function TyreForm({ form, setForm, save, close, locations, admin, saving, messag
             </select>
           </label>
         </div>
+        <label className="note-field">
+          Napomena
+          <textarea
+            value={form.note ?? ""}
+            maxLength="500"
+            placeholder="Npr. jedna guma ima manje oštećenje na bočnoj strani."
+            onChange={(event) => setForm({ ...form, note: event.target.value })}
+          />
+        </label>
         <datalist id="widths">
           {sizes.width.map((x) => (
             <option key={x} value={x} />
@@ -823,6 +833,7 @@ function Details({ tyre, admin, view, completeShipping, cancelShipping, close, e
     ["Tip", tyre.is_commercial ? "C / teretna" : "Putnička"],
     ["Magacin", tyre.location || "Nije unet"],
     tyre.dot && ["DOT", tyre.dot],
+    tyre.note && ["Napomena", tyre.note],
     admin && tyre.purchase_price != null && ["Nabavna cena", `${tyre.purchase_price} € / kom.`],
   ].filter(Boolean);
   const customerFacts =
