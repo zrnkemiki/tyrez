@@ -64,6 +64,17 @@ const formatDateTime = (value) =>
     timeZone: "Europe/Belgrade",
   }).format(new Date(value));
 
+function useScrollLock(locked) {
+  useEffect(() => {
+    if (!locked) return undefined;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [locked]);
+}
+
 function App() {
   const [session, setSession] = useState(null),
     [profile, setProfile] = useState(null),
@@ -83,6 +94,7 @@ function App() {
     [msg, setMsg] = useState(""),
     [saving, setSaving] = useState(false),
     [locations, setLocations] = useState([]);
+  useScrollLock(Boolean(form || selected || operation));
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setSession(data.session));
     const {
@@ -989,6 +1001,7 @@ function Warehouse({ locations, reload }) {
     [catalog, setCatalog] = useState([]),
     [editing, setEditing] = useState(null),
     [message, setMessage] = useState("");
+  useScrollLock(open);
   async function loadCatalog() {
     const { data, error } = await supabase
       .from("warehouse_locations")
