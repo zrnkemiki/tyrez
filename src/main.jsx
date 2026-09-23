@@ -23,6 +23,7 @@ const empty = {
   sale_price: "",
   purchase_price: "",
   note: "",
+  dot: "",
   location: "",
   is_commercial: false,
   photoFiles: [],
@@ -89,6 +90,7 @@ function App() {
       from: "",
       to: "",
     }),
+    [reportFilters, setReportFilters] = useState({ from: "", to: "" }),
     [form, setForm] = useState(null),
     [selected, setSelected] = useState(null),
     [operation, setOperation] = useState(null),
@@ -328,6 +330,15 @@ function App() {
               Prodate
             </button>
           )}
+          {admin && (
+            <button
+              className={view === "reports" ? "is-active" : ""}
+              aria-current={view === "reports" ? "page" : undefined}
+              onClick={() => setView("reports")}
+            >
+              Izveštaji
+            </button>
+          )}
           {admin && <Warehouse locations={locations} reload={load} />}
         </nav>
         <div className="profile">
@@ -354,6 +365,8 @@ function App() {
               ? "ISPORUKE"
               : view === "sold"
                 ? "IZVEŠTAJ PRODAJE"
+                : view === "reports"
+                  ? "PREGLED POSLOVANJA"
                 : "LAGER GUMA"}
           </p>
           <h1>
@@ -361,6 +374,8 @@ function App() {
               ? "Gume za slanje"
               : view === "sold"
                 ? "Prodate gume"
+                : view === "reports"
+                  ? "Izveštaji"
                 : "Gume na stanju"}
           </h1>
         </div>
@@ -370,15 +385,21 @@ function App() {
           </button>
         )}
       </section>
-      <Filters f={filters} setF={setFilters} sold={view === "sold"} />
-      <div className="cards">
-        {visible.map((t) => (
-          <Card key={t.id} tyre={t} open={() => setSelected(t)} />
-        ))}
-        {!visible.length && (
-          <div className="empty">Nema stavki za izabrani pregled.</div>
-        )}
-      </div>
+      {view === "reports" ? (
+        <Reports tyres={tyres} filters={reportFilters} setFilters={setReportFilters} />
+      ) : (
+        <>
+          <Filters f={filters} setF={setFilters} sold={view === "sold"} />
+          <div className="cards">
+            {visible.map((t) => (
+              <Card key={t.id} tyre={t} open={() => setSelected(t)} />
+            ))}
+            {!visible.length && (
+              <div className="empty">Nema stavki za izabrani pregled.</div>
+            )}
+          </div>
+        </>
+      )}
       {form && (
         <TyreForm
           form={form}
@@ -565,6 +586,119 @@ function Filters({ f, setF, sold }) {
     </section>
   );
 }
+function Reports({ tyres, filters, setFilters }) {
+  const inPeriod = (tyre) => {
+    const date = tyre.sold_at?.slice(0, 10);
+    return (
+      date &&
+      (!filters.from || date >= filters.from) &&
+      (!filters.to || date <= filters.to)
+    );
+  };
+  const sold = tyres.filter((tyre) => tyre.status === "sold" && inPeriod(tyre));
+  const stock = tyres.filter(
+    (tyre) => tyre.status !== "sold" && !tyre.shipment_required,
+  );
+  const reservations = tyres.filter(
+    (tyre) => tyre.status === "reserved" && !tyre.shipment_required,
+  );
+  const shipping = tyres.filter(
+    (tyre) => tyre.status === "reserved" && tyre.shipment_required,
+  );
+  const groupBy = (items, key) =>
+    [...items.reduce((groups, item) => {
+      const group = key(item);
+      const current = groups.get(group) || { label: group, quantity: 0, rows: 0 };
+      current.quantity += Number(item.quantity || 0);
+      current.rows += 1;
+      groups.set(group, current);
+      return groups;
+    }, new Map()).values()].sort((a, b) => b.quantity - a.quantity);
+  const byWarehouse = groupBy(stock, (tyre) => tyre.location || "Bez lokacije");
+  const byDimension = groupBy(
+    stock,
+    (tyre) => `${tyre.width}/${tyre.profile} R${tyre.diameter}${tyre.is_commercial ? " C" : ""}`,
+  );
+  const topSoldDimensions = groupBy(
+    sold,
+    (tyre) => `${tyre.width}/${tyre.profile} R${tyre.diameter}${tyre.is_commercial ? " C" : ""}`,
+  ).slice(0, 5);
+  const oldestStock = [...stock]
+    .sort((a, b) => new Date(a.created_at) - new Date(b.created_at))
+    .slice(0, 5);
+  const soldQuantity = sold.reduce((sum, tyre) => sum + Number(tyre.quantity || 0), 0);
+  const turnover = sold.reduce(
+    (sum, tyre) => sum + Number(tyre.quantity || 0) * Number(tyre.sale_price || 0),
+    0,
+  );
+  const reset = () => setFilters({ from: "", to: "" });
+  return (
+    <div className="reports">
+      <section className="panel report-period">
+        <div>
+          <h2>Period prodaje</h2>
+          <p>Izaberi period za prodajne pokazatelje i najprodavanije dimenzije.</p>
+        </div>
+        <div className="report-period-fields">
+          <label>Od<input type="date" value={filters.from} onChange={(event) => setFilters({ ...filters, from: event.target.value })} /></label>
+          <label>Do<input type="date" value={filters.to} onChange={(event) => setFilters({ ...filters, to: event.target.value })} /></label>
+          <button type="button" className="text-button" onClick={reset}>Resetuj</button>
+        </div>
+      </section>
+      <section className="report-summary">
+        <div><small>Prodate stavke</small><strong>{sold.length}</strong></div>
+        <div><small>Prodate gume</small><strong>{soldQuantity} kom.</strong></div>
+        <div><small>Promet od prodaje</small><strong>{turnover.toLocaleString("sr-RS")} €</strong></div>
+        <div><small>Trenutno rezervisano</small><strong>{reservations.length} stavki</strong></div>
+        <div><small>Za slanje</small><strong>{shipping.length} stavki</strong></div>
+      </section>
+      <div className="report-grid">
+        <ReportTable title="Stanje po magacinu" rows={byWarehouse} empty="Nema guma na stanju." />
+        <ReportTable title="Stanje po dimenziji" rows={byDimension.slice(0, 8)} empty="Nema guma na stanju." />
+        <ReportTable title="Najprodavanije dimenzije" rows={topSoldDimensions} empty="Nema prodaje za izabrani period." />
+        <section className="panel report-table">
+          <h2>Najstarije na lageru</h2>
+          {oldestStock.length ? (
+            <div className="report-rows">
+              {oldestStock.map((tyre) => {
+                const days = Math.max(0, Math.floor((Date.now() - new Date(tyre.created_at)) / 86400000));
+                return <div key={tyre.id}><span>{tyre.brand} {tyre.model} · {tyre.width}/{tyre.profile} R{tyre.diameter}</span><strong>{days} dana</strong></div>;
+              })}
+            </div>
+          ) : <p className="muted">Nema guma na stanju.</p>}
+        </section>
+        <section className="panel report-table">
+          <h2>Rezervisane gume</h2>
+          {reservations.length ? (
+            <div className="report-rows">
+              {reservations.slice(0, 5).map((tyre) => <div key={tyre.id}><span>{tyre.width}/{tyre.profile} R{tyre.diameter} · {tyre.customer_name || "Kupac nije unet"}</span><strong>{tyre.quantity} kom.</strong></div>)}
+            </div>
+          ) : <p className="muted">Nema rezervisanih guma.</p>}
+        </section>
+        <section className="panel report-table">
+          <h2>Gume za slanje</h2>
+          {shipping.length ? (
+            <div className="report-rows">
+              {shipping.slice(0, 5).map((tyre) => <div key={tyre.id}><span>{tyre.width}/{tyre.profile} R{tyre.diameter} · {tyre.customer_name || "Kupac nije unet"}</span><strong>{tyre.quantity} kom.</strong></div>)}
+            </div>
+          ) : <p className="muted">Nema guma za slanje.</p>}
+        </section>
+      </div>
+    </div>
+  );
+}
+function ReportTable({ title, rows, empty }) {
+  return (
+    <section className="panel report-table">
+      <h2>{title}</h2>
+      {rows.length ? (
+        <div className="report-rows">
+          {rows.map((row) => <div key={row.label}><span>{row.label}</span><strong>{row.quantity} kom.</strong></div>)}
+        </div>
+      ) : <p className="muted">{empty}</p>}
+    </section>
+  );
+}
 function Card({ tyre, open }) {
   const p = photoUrl(imagesFor(tyre)[0]?.path);
   return (
@@ -586,6 +720,7 @@ function Card({ tyre, open }) {
           {L[tyre.season]} · {tyre.quantity} kom. ·{" "}
           {tyre.location || "Bez lokacije"}
         </p>
+        {tyre.dot && <p className="tyre-dot">DOT: {tyre.dot}</p>}
         <div className="price-row">
           <strong>{tyre.sale_price} €</strong>
           <button className="card-action" onClick={open}>
@@ -694,6 +829,22 @@ function TyreForm({ form, setForm, save, close, locations, admin, saving, messag
               step=".1"
               value={form.tread_depth_mm ?? ""}
               onChange={(event) => setForm({ ...form, tread_depth_mm: event.target.value })}
+            />
+          </label>
+          <label>
+            DOT (4 cifre)
+            <input
+              value={form.dot ?? ""}
+              inputMode="numeric"
+              maxLength="4"
+              pattern="[0-9]{4}"
+              placeholder="npr. 2424"
+              onChange={(event) =>
+                setForm({
+                  ...form,
+                  dot: event.target.value.replace(/\D/g, "").slice(0, 4),
+                })
+              }
             />
           </label>
           <label>
